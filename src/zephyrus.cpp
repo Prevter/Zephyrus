@@ -1,5 +1,7 @@
 #include <zephyrus.hpp>
 
+#include <iostream>
+
 namespace zephyrus {
     void Zephyrus::setState(BotState state) {
         m_state = state;
@@ -17,8 +19,9 @@ namespace zephyrus {
         }
     }
 
-    void Zephyrus::GJBaseGameLayerProcessCommands(uint32_t frame) {
-        if (m_frame == frame) return; // Don't process the same frame twice
+    void Zephyrus::GJBaseGameLayerProcessCommands() {
+        uint32_t frame = m_getFrameMethod();
+        if (frame == m_frame) return;
 
         m_frame = frame;
 
@@ -31,7 +34,7 @@ namespace zephyrus {
                         f.isPressed());
             }
 
-            if (m_fixMode == BotFixMode::EveryFrame) {
+            if (m_fixMode == BotFixMode::EveryFrame || (m_fixMode == BotFixMode::EveryAction && !frames.empty())) {
                 auto frameFixes = m_macro.getFrameFixes(m_frame);
                 for (const auto &f: frameFixes) {
                     m_fixPlayerMethod(0, f.getPlayer1());
@@ -49,7 +52,9 @@ namespace zephyrus {
         }
     }
 
-    void Zephyrus::PlayLayerResetLevel(uint32_t frame) {
+    void Zephyrus::PlayLayerResetLevel() {
+        uint32_t frame = m_getFrameMethod();
+
         if (m_state == BotState::Recording) {
             // Remove everything past the current frame
             m_macro.clearFrames(frame);

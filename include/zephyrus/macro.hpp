@@ -44,10 +44,7 @@ namespace zephyrus {
             struct PlayerData {
                 float x; // The x position of the player
                 float y; // The y position of the player
-                bool flipGravity; // Whether the player has flipped gravity
-                bool hasSpeed; // Whether speed was recorded
-                float xSpeed; // The x speed of the player
-                float ySpeed; // The y speed of the player
+                double ySpeed; // The y speed of the player
                 float rotation; // The rotation of the player
             };
 

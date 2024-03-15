@@ -4,6 +4,8 @@
 #include <bit>
 #include <iostream>
 
+// #include <zlib.h>
+
 namespace zephyrus {
 
     /// @brief Utility namespace for reading files using little endian
@@ -13,8 +15,8 @@ namespace zephyrus {
             union {
                 uint32_t i;
                 char c[4];
-            } bint = {0x01020304};
-            return bint.c[0] == 1;
+            } bInt = {0x01020304};
+            return bInt.c[0] == 1;
         }
 
         /// @brief Reads a value from a file using little endian
@@ -33,17 +35,24 @@ namespace zephyrus {
             return value;
         }
 
+        double readDouble(std::ifstream &file) {
+            double value;
+            file.read(reinterpret_cast<char *>(&value), sizeof(double));
+            return value;
+        }
+
+        float readSingle(std::ifstream &file) {
+            float value;
+            file.read(reinterpret_cast<char *>(&value), sizeof(float));
+            return value;
+        }
+
         Macro::FrameFix::PlayerData readPlayerData(std::ifstream &file) {
             Macro::FrameFix::PlayerData data{};
-            data.x = FileReader::read<float>(file);
-            data.y = FileReader::read<float>(file);
-            data.flipGravity = FileReader::read<bool>(file);
-            data.hasSpeed = FileReader::read<bool>(file);
-            if (data.hasSpeed) {
-                data.xSpeed = FileReader::read<float>(file);
-                data.ySpeed = FileReader::read<float>(file);
-                data.rotation = FileReader::read<float>(file);
-            }
+            data.x = FileReader::readSingle(file);
+            data.y = FileReader::readSingle(file);
+            data.ySpeed = FileReader::readDouble(file);
+            data.rotation = FileReader::readSingle(file);
             return data;
         }
 
@@ -77,16 +86,19 @@ namespace zephyrus {
             file.write(reinterpret_cast<char *>(&value), sizeof(T));
         }
 
+        void write(std::ofstream &file, double value) {
+            file.write(reinterpret_cast<char *>(&value), sizeof(double));
+        }
+
+        void write(std::ofstream &file, float value) {
+            file.write(reinterpret_cast<char *>(&value), sizeof(float));
+        }
+
         void writePlayerData(std::ofstream &file, const Macro::FrameFix::PlayerData &data) {
             FileReader::write(file, data.x);
             FileReader::write(file, data.y);
-            FileReader::write(file, data.flipGravity);
-            FileReader::write(file, data.hasSpeed);
-            if (data.hasSpeed) {
-                FileReader::write(file, data.xSpeed);
-                FileReader::write(file, data.ySpeed);
-                FileReader::write(file, data.rotation);
-            }
+            FileReader::write(file, data.ySpeed);
+            FileReader::write(file, data.rotation);
         }
 
         void writeFileHeader(std::ofstream &file, const MacroFileHeader &header) {
@@ -103,6 +115,30 @@ namespace zephyrus {
         }
     }
 
+//    namespace ZLib {
+//        std::vector<uint8_t> compress(const std::vector<uint8_t> &data) {
+//            std::vector<uint8_t> compressed;
+//            compressed.resize(compressBound(data.size()));
+//
+//            uLongf compressedSize = compressed.size();
+//            compress2(compressed.data(), &compressedSize, data.data(), data.size(), Z_BEST_COMPRESSION);
+//
+//            compressed.resize(compressedSize);
+//            return compressed;
+//        }
+//
+//        std::vector<uint8_t> decompress(const std::vector<uint8_t> &data, size_t originalSize) {
+//            std::vector<uint8_t> decompressed;
+//            decompressed.resize(originalSize);
+//
+//            uLongf decompressedSize = decompressed.size();
+//            uncompress(decompressed.data(), &decompressedSize, data.data(), data.size());
+//
+//            decompressed.resize(decompressedSize);
+//            return decompressed;
+//        }
+//    }
+
     bool readFromFile(const std::filesystem::path &path, Macro &macro) {
         std::ifstream file(path, std::ios::binary);
         if (!file.is_open()) {
@@ -111,18 +147,15 @@ namespace zephyrus {
 
         MacroFileHeader header = FileReader::readFileHeader(file);
 
-        if (header.magic != 0x525A || header.version != 1) {
+        if (header.magic != 0x525A || header.version != 2) {
             return false;
         }
 
         macro.clearFrames();
 
-        auto fpsScale = 240.0 / header.recordedFPS;
-
         for (uint32_t i = 0; i < header.actionCount; i++) {
             MacroFileAction action = FileReader::readFileAction(file);
-            auto frame = static_cast<uint32_t>(action.frame * fpsScale);
-            macro.addFrame(frame, action.isPlayer2(), action.getButton(), action.isButtonDown());
+            macro.addFrame(action.frame, action.isPlayer2(), action.getButton(), action.isButtonDown());
         }
 
         for (uint32_t i = 0; i < header.frameFixCount; i++) {
@@ -134,11 +167,10 @@ namespace zephyrus {
                 frameFix.player2 = FileReader::readPlayerData(file);
             }
 
-            auto frame = static_cast<uint32_t>(frameFix.frame * fpsScale);
             if (frameFix.player2Exists) {
-                macro.addFrameFix(frame, frameFix.player1, frameFix.player2);
+                macro.addFrameFix(frameFix.frame, frameFix.player1, frameFix.player2);
             } else {
-                macro.addFrameFix(frame, frameFix.player1);
+                macro.addFrameFix(frameFix.frame, frameFix.player1);
             }
         }
 
@@ -153,7 +185,7 @@ namespace zephyrus {
 
         MacroFileHeader header{};
         header.magic = 0x525A;
-        header.version = 1;
+        header.version = 2;
         header.recordedFPS = 240;
         header.actionCount = macro.getFrames().size();
         header.frameFixCount = macro.getFrameFixes().size();

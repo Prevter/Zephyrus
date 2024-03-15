@@ -26,6 +26,7 @@ namespace zephyrus {
     using HandleButtonMethod = std::function<void(int playerIndex, int buttonIndex, bool state)>;
     using FixPlayerMethod = std::function<void(int playerIndex, Macro::FrameFix::PlayerData data)>;
     using RequestMacroFixMethod = std::function<Macro::FrameFix()>;
+    using GetFrameMethod = std::function<uint32_t()>;
 
     /// @brief The main class for the Zephyrus Replay Bot
     class Zephyrus {
@@ -69,6 +70,12 @@ namespace zephyrus {
         /// @brief Returns the current frame
         [[nodiscard]] uint32_t getFrame() const { return m_frame; }
 
+        /// @brief Sets the method to get the current frame
+        [[nodiscard]] GetFrameMethod getGetFrameMethod() const { return m_getFrameMethod; }
+
+        /// @brief Returns the method to get the current frame
+        void setGetFrameMethod(GetFrameMethod method) { m_getFrameMethod = std::move(method); }
+
     protected:
         BotState m_state = BotState::Idle;
         BotFixMode m_fixMode = BotFixMode::EveryAction;
@@ -77,6 +84,7 @@ namespace zephyrus {
         HandleButtonMethod m_handleButtonMethod;
         FixPlayerMethod m_fixPlayerMethod;
         RequestMacroFixMethod m_requestMacroFixMethod;
+        GetFrameMethod m_getFrameMethod;
 
     public: // Hook callbacks
         /// @brief PlayerObject::pushButton hook
@@ -91,10 +99,10 @@ namespace zephyrus {
 
         /// @brief GJBaseGameLayer::processCommands hook
         /// @param frame The current frame
-        void GJBaseGameLayerProcessCommands(uint32_t frame);
+        void GJBaseGameLayerProcessCommands();
 
         /// @brief PlayLayer::resetLevel hook
         /// @param frame Frame on which player got respawned
-        void PlayLayerResetLevel(uint32_t frame);
+        void PlayLayerResetLevel();
     };
 }
