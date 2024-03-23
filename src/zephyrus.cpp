@@ -23,10 +23,14 @@ namespace zephyrus {
         uint32_t frame = m_getFrameMethod();
         if (frame == m_frame) return;
 
+        uint32_t oldFrame = m_frame;
+        uint32_t frameDiff = frame - m_frame;
         m_frame = frame;
 
         if (m_state == BotState::Playing) {
-            auto frames = m_macro.getFrames(m_frame);
+            auto frames = frameDiff > 1 ? // If the frame difference is greater than 1
+                    m_macro.getFrames(oldFrame + 1, m_frame) : // Get all frames between the last frame and the current frame
+                    m_macro.getFrames(m_frame); // Get only the current frame
             for (const auto &f: frames) {
                 m_handleButtonMethod(
                         f.isSecondPlayer() ? 1 : 0,

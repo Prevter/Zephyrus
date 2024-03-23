@@ -7,7 +7,7 @@ namespace zephyrus {
             return frame.getFrame() >= from;
         }), m_frames.end());
         m_frameFixes.erase(std::remove_if(m_frameFixes.begin(), m_frameFixes.end(), [from](const FrameFix& frameFix) {
-            return frameFix.getFrame() > from;
+            return frameFix.getFrame() >= from;
         }), m_frameFixes.end());
     }
 
