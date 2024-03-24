@@ -4,7 +4,7 @@
 #include <bit>
 #include <iostream>
 
-// #include <zlib.h>
+#include <zephyrus/formats/gdreplay.hpp>
 
 namespace zephyrus {
 
@@ -115,31 +115,18 @@ namespace zephyrus {
         }
     }
 
-//    namespace ZLib {
-//        std::vector<uint8_t> compress(const std::vector<uint8_t> &data) {
-//            std::vector<uint8_t> compressed;
-//            compressed.resize(compressBound(data.size()));
-//
-//            uLongf compressedSize = compressed.size();
-//            compress2(compressed.data(), &compressedSize, data.data(), data.size(), Z_BEST_COMPRESSION);
-//
-//            compressed.resize(compressedSize);
-//            return compressed;
-//        }
-//
-//        std::vector<uint8_t> decompress(const std::vector<uint8_t> &data, size_t originalSize) {
-//            std::vector<uint8_t> decompressed;
-//            decompressed.resize(originalSize);
-//
-//            uLongf decompressedSize = decompressed.size();
-//            uncompress(decompressed.data(), &decompressedSize, data.data(), data.size());
-//
-//            decompressed.resize(decompressedSize);
-//            return decompressed;
-//        }
-//    }
-
     bool readFromFile(const std::filesystem::path &path, Macro &macro) {
+        // Check if the file exists
+        if (!std::filesystem::exists(path)) {
+            return false;
+        }
+
+        // Deduce file format from file extension
+        std::string extension = path.extension().string();
+        if (extension == ".gdr") // Read GDReplay file
+            return formats::GDR::readFromFile(path, macro);
+
+        // If not a third-party format, read the file as a Zephyrus macro
         std::ifstream file(path, std::ios::binary);
         if (!file.is_open()) {
             return false;
@@ -178,6 +165,12 @@ namespace zephyrus {
     }
 
     void writeToFile(const Macro &macro, const std::filesystem::path &path) {
+        // Deduce file format from file extension
+        std::string extension = path.extension().string();
+        if (extension == ".gdr") // Read GDReplay file
+            return formats::GDR::writeToFile(macro, path);
+
+        // If not a third-party format, write the file as a Zephyrus macro
         std::ofstream file(path, std::ios::binary);
         if (!file.is_open()) {
             return;
